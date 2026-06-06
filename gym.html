@@ -1261,6 +1261,84 @@ img, video, canvas, svg { max-width: 100%; }
 }
 
 .hidden { display: none !important; }
+
+/* ===== Cardio Logger ===== */
+.cd-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.cd-field { display: flex; flex-direction: column; gap: 5px; }
+.cd-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.cd-input {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-1);
+  font-family: var(--font);
+  font-size: 14px;
+  padding: 10px 12px;
+  width: 100%;
+  transition: border-color 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.cd-input:focus { outline: none; border-color: rgba(255,255,255,0.25); }
+.cd-input option { background: #1a1a1d; }
+.cd-calc {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cd-calc-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.cd-calc-value {
+  font-family: var(--font-mono);
+  font-size: 30px; font-weight: 800;
+  letter-spacing: -0.03em; color: var(--text-1); line-height: 1;
+}
+.cd-calc-unit {
+  font-size: 13px; font-weight: 600; color: var(--text-3); margin-left: 4px;
+}
+.cd-history-list { margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+.cd-history-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.cd-history-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
+.cd-history-body { flex: 1; min-width: 0; }
+.cd-history-title {
+  font-size: 14px; font-weight: 600; color: var(--text-1);
+  display: flex; align-items: baseline; gap: 8px;
+}
+.cd-history-dur { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+.cd-history-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.cd-history-cal {
+  font-family: var(--font-mono); font-size: 20px; font-weight: 700;
+  color: var(--text-1); text-align: right; line-height: 1; flex-shrink: 0;
+}
+.cd-history-cal-unit {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-3); text-align: right; margin-top: 2px;
+}
+.cd-empty { text-align: center; color: var(--text-3); font-size: 13px; padding: 20px 0; }
+@media (max-width: 480px) {
+  .cd-form-grid { grid-template-columns: 1fr; gap: 8px; }
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="topbar.js" defer></script>
@@ -1582,6 +1660,57 @@ img, video, canvas, svg { max-width: 100%; }
       <div class="po-tw-past-body" id="poTwPastBody" style="display:none"></div>
     </div>
   </div>
+
+  <!-- ===== CARDIO LOGGER ===== -->
+  <div class="wt-section" style="margin-top:22px">
+    <div class="wt-divider"><span>CARDIO</span></div>
+
+    <div class="card">
+      <div class="cd-form-grid">
+        <div class="cd-field">
+          <label class="cd-label">Type</label>
+          <select class="cd-input" id="cdType">
+            <option value="treadmill">🏃 Treadmill</option>
+            <option value="bike">🚴 Exercise Bike</option>
+            <option value="rowing">🚣 Rowing</option>
+            <option value="elliptical">🌀 Elliptical</option>
+            <option value="stairmaster">🪜 Stairmaster</option>
+            <option value="other">💪 Other</option>
+          </select>
+        </div>
+        <div class="cd-field">
+          <label class="cd-label">Duration (min)</label>
+          <input class="cd-input" type="number" id="cdDuration" min="1" max="300" placeholder="30" inputmode="decimal">
+        </div>
+        <div class="cd-field" id="cdSpeedField">
+          <label class="cd-label" id="cdSpeedLabel">Speed (km/h)</label>
+          <input class="cd-input" type="number" id="cdSpeed" min="0" step="0.5" placeholder="8" inputmode="decimal">
+        </div>
+        <div class="cd-field" id="cdInclineField">
+          <label class="cd-label">Incline (%)</label>
+          <input class="cd-input" type="number" id="cdIncline" min="0" max="30" step="0.5" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="cd-field">
+          <label class="cd-label" id="cdWeightLabel">Body Weight (kg)</label>
+          <input class="cd-input" type="number" id="cdWeight" min="20" max="300" step="0.5" placeholder="75" inputmode="decimal">
+        </div>
+      </div>
+
+      <div class="cd-calc">
+        <span class="cd-calc-label">Est. Calories</span>
+        <span>
+          <span class="cd-calc-value" id="cdCalcValue">—</span>
+          <span class="cd-calc-unit">kcal</span>
+        </span>
+      </div>
+
+      <button class="po-btn-primary" id="cdLogBtn" style="width:100%">Log Session</button>
+    </div>
+
+    <div class="wt-divider" style="margin-top:16px"><span>RECENT SESSIONS</span></div>
+    <div id="cdHistoryList" class="cd-history-list"></div>
+  </div>
+
 </div>
 
 <!-- Add / Edit Exercise Modal -->
@@ -3285,7 +3414,7 @@ img, video, canvas, svg { max-width: 100%; }
   const SUPABASE_URL = 'https://mqomgwngveilyqefoqim.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_2LXuJclhmFh553PyxeKTBQ_VluozYr5';
   const APP_KEY = 'po-coach';
-  const PC_SYNCED_KEYS = ['po_coach_v1', 'po_coach_workout_done', 'po_coach_weights', 'po_coach_photos'];
+  const PC_SYNCED_KEYS = ['po_coach_v1', 'po_coach_workout_done', 'po_coach_weights', 'po_coach_photos', 'cardio_logs'];
 
   let pcSupa = null;
   let pcPushTimer = null;
@@ -3467,6 +3596,193 @@ img, video, canvas, svg { max-width: 100%; }
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) pcFlushPushOnUnload();
   });
+})();
+</script>
+
+<script>
+// ===== CARDIO LOGGER =====
+(function () {
+  const CARDIO_KEY = 'cardio_logs';
+
+  const TYPES = {
+    treadmill:  { label: 'Treadmill',     icon: '🏃', speedLabel: 'Speed (km/h)',      showIncline: true  },
+    bike:       { label: 'Exercise Bike', icon: '🚴', speedLabel: 'Resistance (1–20)', showIncline: false },
+    rowing:     { label: 'Rowing',        icon: '🚣', speedLabel: 'Stroke rate (spm)', showIncline: false },
+    elliptical: { label: 'Elliptical',    icon: '🌀', speedLabel: 'Resistance (1–20)', showIncline: false },
+    stairmaster:{ label: 'Stairmaster',   icon: '🪜', speedLabel: 'Steps / min',       showIncline: false },
+    other:      { label: 'Other',         icon: '💪', speedLabel: 'Intensity (1–10)',  showIncline: false },
+  };
+
+  // All calorie estimates use MET × weight(kg) × hours.
+  // Treadmill uses the ACSM metabolic equations for walking / running.
+  function calcCalories(type, speed, incline, weightKg, mins) {
+    if (!mins || !weightKg || mins <= 0 || weightKg <= 0) return null;
+    const spd = parseFloat(speed) || 0;
+    const inc = parseFloat(incline) || 0;
+    let met;
+
+    if (type === 'treadmill') {
+      const vMperMin = spd * 1000 / 60;          // km/h → m/min
+      const grade = inc / 100;
+      const vo2 = spd < 8
+        ? 0.1 * vMperMin + 1.8 * vMperMin * grade + 3.5   // ACSM walking
+        : 0.2 * vMperMin + 0.9 * vMperMin * grade + 3.5;  // ACSM running
+      met = Math.max(2, vo2 / 3.5);
+    } else {
+      const metTable = {
+        bike:        (s) => Math.max(3, 7   + s * 0.30),
+        rowing:      (s) => Math.max(3, 3   + s * 0.20),
+        elliptical:  (s) => Math.max(3, 4.5 + s * 0.35),
+        stairmaster: (s) => Math.max(3, 7   + s * 0.02),
+        other:       (s) => Math.max(3, 3   + s * 0.70),
+      };
+      met = (metTable[type] || metTable.other)(spd);
+    }
+    return Math.round(met * weightKg * (mins / 60));
+  }
+
+  function getLogs() {
+    try { return JSON.parse(localStorage.getItem(CARDIO_KEY) || '[]'); } catch { return []; }
+  }
+  function saveLogs(logs) {
+    try { localStorage.setItem(CARDIO_KEY, JSON.stringify(logs)); } catch {}
+  }
+
+  function fmtDate(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d, 12))
+      .toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' });
+  }
+
+  function renderHistory() {
+    const el = document.getElementById('cdHistoryList');
+    if (!el) return;
+    const logs = getLogs().slice(-7).reverse();
+    if (!logs.length) {
+      el.innerHTML = '<div class="cd-empty">No sessions logged yet.</div>';
+      return;
+    }
+    el.innerHTML = logs.map(log => {
+      const t = TYPES[log.type] || TYPES.other;
+      const meta = [];
+      if (log.speed) {
+        meta.push(t.speedLabel.split(' ')[0] + ' ' + log.speed + (log.type === 'treadmill' ? ' km/h' : ''));
+      }
+      if (log.incline && log.type === 'treadmill') meta.push(log.incline + '% incline');
+      if (log.weight) meta.push(log.weight + (log.unit === 'lb' ? ' lb' : ' kg'));
+      return `<div class="cd-history-item">
+        <div class="cd-history-icon">${t.icon}</div>
+        <div class="cd-history-body">
+          <div class="cd-history-title">
+            <span>${t.label}</span>
+            <span class="cd-history-dur">${log.duration} min</span>
+          </div>
+          <div class="cd-history-meta">${fmtDate(log.date)}${meta.length ? ' · ' + meta.join(' · ') : ''}</div>
+        </div>
+        <div>
+          <div class="cd-history-cal">${log.calories}</div>
+          <div class="cd-history-cal-unit">kcal</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  let cdUnit = 'kg';
+
+  function getWeightKg(raw) {
+    const w = parseFloat(raw);
+    return cdUnit === 'lb' ? w / 2.2046 : w;
+  }
+
+  function updateCalc() {
+    const type     = document.getElementById('cdType').value;
+    const duration = document.getElementById('cdDuration').value;
+    const speed    = document.getElementById('cdSpeed').value;
+    const incline  = document.getElementById('cdIncline').value;
+    const weightRaw= document.getElementById('cdWeight').value;
+    const weightKg = getWeightKg(weightRaw);
+    const cal = calcCalories(type, speed, incline, weightKg, parseFloat(duration));
+    const el = document.getElementById('cdCalcValue');
+    if (el) el.textContent = cal !== null ? cal : '—';
+  }
+
+  function updateTypeUI() {
+    const type = document.getElementById('cdType').value;
+    const t = TYPES[type] || TYPES.other;
+    const lbl = document.getElementById('cdSpeedLabel');
+    const inclineField = document.getElementById('cdInclineField');
+    if (lbl) lbl.textContent = t.speedLabel;
+    if (inclineField) inclineField.style.display = t.showIncline ? '' : 'none';
+    updateCalc();
+  }
+
+  function init() {
+    // Pre-fill weight from the weight tracker, respecting units
+    try {
+      const state = JSON.parse(localStorage.getItem('po_coach_v1') || '{}');
+      const weights = JSON.parse(localStorage.getItem('po_coach_weights') || '[]');
+      cdUnit = state.units || 'kg';
+      const lbl = document.getElementById('cdWeightLabel');
+      if (lbl) lbl.textContent = `Body Weight (${cdUnit})`;
+      if (weights.length) {
+        const last = weights[weights.length - 1];
+        const el = document.getElementById('cdWeight');
+        if (el && !el.value) el.value = last.weight;
+      }
+    } catch {}
+
+    const typeEl    = document.getElementById('cdType');
+    const durEl     = document.getElementById('cdDuration');
+    const speedEl   = document.getElementById('cdSpeed');
+    const inclineEl = document.getElementById('cdIncline');
+    const weightEl  = document.getElementById('cdWeight');
+    const logBtn    = document.getElementById('cdLogBtn');
+    if (!typeEl || !logBtn) return;
+
+    typeEl.addEventListener('change', updateTypeUI);
+    [durEl, speedEl, inclineEl, weightEl].forEach(el => { if (el) el.addEventListener('input', updateCalc); });
+
+    logBtn.addEventListener('click', () => {
+      const dur = parseFloat(durEl.value);
+      const wRaw = parseFloat(weightEl.value);
+      const wKg = getWeightKg(wRaw);
+      if (!dur || dur <= 0 || !wRaw || wRaw <= 0) {
+        if (!dur || dur <= 0) { durEl.style.borderColor = 'var(--bad)'; setTimeout(() => { durEl.style.borderColor = ''; }, 1500); }
+        if (!wRaw || wRaw <= 0) { weightEl.style.borderColor = 'var(--bad)'; setTimeout(() => { weightEl.style.borderColor = ''; }, 1500); }
+        return;
+      }
+      const spd = parseFloat(speedEl.value) || 0;
+      const inc = parseFloat(inclineEl.value) || 0;
+      const cal = calcCalories(typeEl.value, spd, inc, wKg, dur) || 0;
+      const logs = getLogs();
+      logs.push({
+        id: Date.now().toString(),
+        date: new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }),
+        type: typeEl.value,
+        duration: dur,
+        speed: spd || null,
+        incline: inc || null,
+        weight: wRaw,
+        unit: cdUnit,
+        calories: cal,
+      });
+      saveLogs(logs);
+      durEl.value = '';
+      speedEl.value = '';
+      inclineEl.value = '';
+      document.getElementById('cdCalcValue').textContent = '—';
+      renderHistory();
+    });
+
+    updateTypeUI();
+    renderHistory();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
 </script>
 
