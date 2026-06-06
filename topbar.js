@@ -11,6 +11,10 @@
 (function () {
   'use strict';
 
+  // Don't inject the topbar when the page is loaded inside an iframe
+  // (the outer index.html tab bar already handles navigation in that context)
+  if (window.self !== window.top) return;
+
   // -------- Supabase config (same project as the rest of the dashboard) --------
   const TOPBAR_SUPABASE_URL = 'https://mqomgwngveilyqefoqim.supabase.co';
   const TOPBAR_SUPABASE_KEY = 'sb_publishable_2LXuJclhmFh553PyxeKTBQ_VluozYr5';

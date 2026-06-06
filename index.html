@@ -1131,8 +1131,11 @@
 
       function formatDateString(dateStr) {
         const [y, m, d] = dateStr.split('-').map(Number);
-        const parsed = new Date(y, m - 1, d);
-        return parsed.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' });
+        // noon UTC avoids any midnight DST edge case; London timezone for display
+        return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString('en-GB', {
+          weekday: 'long', month: 'long', day: 'numeric',
+          timeZone: 'Europe/London'
+        });
       }
 
       function loadGoals(storageKey) {
