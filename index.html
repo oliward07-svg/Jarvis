@@ -2152,7 +2152,7 @@
         const out = {};
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
-          if (k && (k.startsWith('goals:') || k === 'goal_streak_v1' || k === 'steps_v1')) {
+          if (k && (k.startsWith('goals:') || k === 'goal_streak_v1')) {
             const v = localStorage.getItem(k);
             if (v != null) { try { out[k] = JSON.parse(v); } catch { out[k] = v; } }
           }
@@ -2166,7 +2166,7 @@
         let changed = false;
         try {
           for (const k of Object.keys(remote)) {
-            if (!k.startsWith('goals:') && k !== 'goal_streak_v1' && k !== 'steps_v1') continue;
+            if (!k.startsWith('goals:') && k !== 'goal_streak_v1') continue;
             const inc = JSON.stringify(remote[k]);
             if (localStorage.getItem(k) !== inc) { localStorage.setItem(k, inc); changed = true; }
           }
@@ -2230,6 +2230,25 @@
             if (inc === dbLastJson) return;
             dbLastJson = inc;
             dbApply(payload.new.data);
+          }).subscribe();
+
+        // ---- Steps table sync ----
+        function applyStepsCount(count) {
+          const todayKey = getActiveDateString();
+          const sd = JSON.parse(localStorage.getItem('steps_v1') || '{}');
+          sd[todayKey] = count || 0;
+          localStorage.setItem('steps_v1', JSON.stringify(sd));
+          updateWidgets();
+        }
+        try {
+          const { data: sData, error: sErr } = await dbSupa.from('steps')
+            .select('count').eq('date', getActiveDateString()).maybeSingle();
+          if (!sErr && sData) applyStepsCount(sData.count);
+        } catch (_) {}
+        dbSupa.channel('steps_live')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'steps',
+            filter: 'date=eq.' + getActiveDateString() }, (payload) => {
+            applyStepsCount(payload.new && payload.new.count != null ? payload.new.count : 0);
           }).subscribe();
       })();
     })();
