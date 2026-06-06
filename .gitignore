@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Netlify build cache
+.netlify
+
+# dependency directories
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
