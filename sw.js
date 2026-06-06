@@ -1,9 +1,10 @@
-const CACHE = 'jarvis-v1';
+const CACHE = 'jarvis-v2';
 const PRECACHE = [
   './',
   './index.html',
   './health.html',
   './water.html',
+  './steps.html',
   './gym.html',
   './topbar.js',
   './manifest.json',

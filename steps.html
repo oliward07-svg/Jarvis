@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Steps</title>
+<style>
+:root {
+  --bg: #0a0a0b;
+  --text-1: #ffffff;
+  --text-2: rgba(255,255,255,0.6);
+  --text-3: rgba(255,255,255,0.35);
+  --text-4: rgba(255,255,255,0.2);
+  --border: rgba(255,255,255,0.06);
+  --accent: #A78BFA;
+  --good: #6EE7B7;
+  --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, #14141a 0%, #0a0a0b 60%);
+  color: var(--text-1);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+.shell {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+}
+
+.day-pill {
+  display: inline-flex; align-items: center;
+  padding: 5px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.10em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.card {
+  background: rgba(255,255,255,0.04);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 14px;
+  backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.card-icon { font-size: 15px; }
+.card-title {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.step-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.step-count {
+  font-family: var(--font-mono);
+  font-size: 52px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  transition: color 0.4s;
+}
+.step-unit {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: -0.01em;
+}
+.step-sub {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-bottom: 16px;
+  min-height: 18px;
+}
+.progress-track {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.7s cubic-bezier(0.22,1,0.36,1), background 0.4s;
+}
+.progress-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.section-eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.section-eyebrow::before {
+  content: '';
+  width: 18px; height: 1px;
+  background: var(--text-3);
+  opacity: 0.6;
+}
+.section-eyebrow::after {
+  content: '';
+  flex: 1; height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent);
+}
+
+.chart {
+  display: flex;
+  gap: 6px;
+  height: 180px;
+  align-items: stretch;
+  padding: 0 2px;
+}
+.chart-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+.chart-count {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-3);
+  height: 14px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.chart-bar-wrap {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 2px;
+}
+.chart-bar {
+  width: 100%;
+  border-radius: 3px 3px 2px 2px;
+  background: rgba(167,139,250,0.25);
+  transition: height 0.7s cubic-bezier(0.22,1,0.36,1);
+  min-height: 0;
+}
+.chart-bar.today { background: var(--accent); }
+.chart-bar.goal-met { background: var(--good); }
+.chart-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.chart-label.today { color: var(--text-1); }
+
+.no-data {
+  text-align: center;
+  color: var(--text-3);
+  font-size: 13px;
+  padding: 20px 0 8px;
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="day-pill" id="datePill">Today</div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-icon">👟</span>
+      <span class="card-title">Today's Steps</span>
+    </div>
+    <div class="step-row">
+      <span class="step-count" id="stepCount">0</span>
+      <span class="step-unit">steps</span>
+    </div>
+    <div class="step-sub" id="stepSub">loading…</div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-label" id="progressLabel">0 / 10,000 goal</div>
+  </div>
+
+  <div class="section-eyebrow">Last 7 Days</div>
+  <div class="card">
+    <div class="chart" id="chart">
+      <div class="no-data">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+  const DB_URL = 'https://mqomgwngveilyqefoqim.supabase.co';
+  const DB_KEY = 'sb_publishable_2LXuJclhmFh553PyxeKTBQ_VluozYr5';
+  const GOAL = 10000;
+
+  function todayStr() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+  }
+
+  function getLast7() {
+    const days = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      days.push(d.toLocaleDateString('en-CA', { timeZone: 'Europe/London' }));
+    }
+    return days;
+  }
+
+  function dayLabel(dateStr, isToday) {
+    if (isToday) return 'Today';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d, 12))
+      .toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'Europe/London' });
+  }
+
+  function fmtShort(n) {
+    if (!n) return '';
+    return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n);
+  }
+
+  const stepData = {};
+
+  function renderToday() {
+    const key = todayStr();
+    const count = stepData[key] || 0;
+    const pct = Math.min(100, count / GOAL * 100);
+    const countEl = document.getElementById('stepCount');
+    countEl.textContent = count.toLocaleString();
+    countEl.style.color = count >= GOAL ? 'var(--good)' : 'var(--text-1)';
+    document.getElementById('stepSub').textContent = count >= GOAL
+      ? '✓ Daily goal reached!'
+      : `${Math.max(0, GOAL - count).toLocaleString()} steps to go`;
+    const fill = document.getElementById('progressFill');
+    fill.style.width = pct + '%';
+    fill.style.background = count >= GOAL ? 'var(--good)' : 'var(--accent)';
+    document.getElementById('progressLabel').textContent =
+      `${count.toLocaleString()} / ${GOAL.toLocaleString()} · ${Math.round(pct)}%`;
+  }
+
+  function renderChart() {
+    const today = todayStr();
+    const days = getLast7();
+    const counts = days.map(d => stepData[d] || 0);
+    const maxVal = Math.max(GOAL, ...counts);
+    const chart = document.getElementById('chart');
+    chart.innerHTML = '';
+
+    days.forEach((dateStr, i) => {
+      const count = counts[i];
+      const isToday = dateStr === today;
+      const heightPct = maxVal > 0 ? Math.max(count / maxVal * 100, count > 0 ? 1.5 : 0) : 0;
+
+      const col = document.createElement('div');
+      col.className = 'chart-col';
+
+      const countLbl = document.createElement('div');
+      countLbl.className = 'chart-count';
+      countLbl.textContent = fmtShort(count);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'chart-bar-wrap';
+
+      const bar = document.createElement('div');
+      bar.className = 'chart-bar' + (isToday ? ' today' : '') + (count >= GOAL ? ' goal-met' : '');
+      bar.style.height = heightPct + '%';
+
+      const lbl = document.createElement('div');
+      lbl.className = 'chart-label' + (isToday ? ' today' : '');
+      lbl.textContent = dayLabel(dateStr, isToday);
+
+      wrap.appendChild(bar);
+      col.appendChild(countLbl);
+      col.appendChild(wrap);
+      col.appendChild(lbl);
+      chart.appendChild(col);
+    });
+  }
+
+  function render() {
+    renderToday();
+    renderChart();
+  }
+
+  async function init() {
+    const key = todayStr();
+    const [y, m, d] = key.split('-').map(Number);
+    document.getElementById('datePill').textContent =
+      new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
+      });
+
+    if (!window.supabase) { render(); return; }
+    const supa = window.supabase.createClient(DB_URL, DB_KEY);
+    const days = getLast7();
+
+    try {
+      const { data: rows, error } = await supa
+        .from('steps')
+        .select('date, count')
+        .gte('date', days[0])
+        .lte('date', days[6]);
+      if (!error && rows) rows.forEach(r => { stepData[r.date] = r.count; });
+    } catch (_) {}
+    render();
+
+    supa.channel('steps_tab_rt')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'steps',
+        filter: 'date=eq.' + todayStr()
+      }, payload => {
+        if (payload.new && payload.new.count != null) {
+          stepData[todayStr()] = payload.new.count;
+          render();
+        }
+      })
+      .subscribe();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>

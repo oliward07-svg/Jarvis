@@ -976,7 +976,12 @@
       border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 14px;
       width: fit-content;
+      max-width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
     }
+    .tab-bar::-webkit-scrollbar { display: none; }
 
     .tab-btn {
       padding: 8px 20px;
@@ -1004,6 +1009,7 @@
     #tab-gym { display: none; }
     #tab-health { display: none; }
     #tab-water { display: none; }
+    #tab-steps { display: none; }
 
     #tab-gym-frame {
       width: 100%;
@@ -1078,6 +1084,7 @@
       <button class="tab-btn active" id="tabDashBtn">Dashboard</button>
       <button class="tab-btn" id="tabHealthBtn">Health</button>
       <button class="tab-btn" id="tabWaterBtn">Water</button>
+      <button class="tab-btn" id="tabStepsBtn">Steps</button>
       <button class="tab-btn" id="tabGymBtn">Gym</button>
     </div>
 
@@ -1240,6 +1247,10 @@
 
     <div id="tab-water">
       <iframe id="tab-water-frame" src="water.html" title="Water Coach" style="width:100%;height:calc(100vh - 110px);border:none;border-radius:16px;background:#0a0a0b;"></iframe>
+    </div>
+
+    <div id="tab-steps">
+      <iframe id="tab-steps-frame" src="steps.html" title="Steps Tracker" style="width:100%;height:calc(100vh - 110px);border:none;border-radius:16px;background:#0a0a0b;"></iframe>
     </div>
 
     <div id="tab-gym">
@@ -2258,20 +2269,24 @@
       const tabDashBtn   = document.getElementById('tabDashBtn');
       const tabHealthBtn = document.getElementById('tabHealthBtn');
       const tabWaterBtn  = document.getElementById('tabWaterBtn');
+      const tabStepsBtn  = document.getElementById('tabStepsBtn');
       const tabGymBtn    = document.getElementById('tabGymBtn');
       const tabDash      = document.getElementById('tab-dashboard');
       const tabHealth    = document.getElementById('tab-health');
       const tabWater     = document.getElementById('tab-water');
+      const tabSteps     = document.getElementById('tab-steps');
       const tabGym       = document.getElementById('tab-gym');
 
       function switchTab(tab) {
         tabDash.style.display   = tab === 'dashboard' ? '' : 'none';
         tabHealth.style.display = tab === 'health'    ? 'block' : 'none';
         tabWater.style.display  = tab === 'water'     ? 'block' : 'none';
+        tabSteps.style.display  = tab === 'steps'     ? 'block' : 'none';
         tabGym.style.display    = tab === 'gym'       ? 'block' : 'none';
         tabDashBtn.classList.toggle('active',   tab === 'dashboard');
         tabHealthBtn.classList.toggle('active', tab === 'health');
         tabWaterBtn.classList.toggle('active',  tab === 'water');
+        tabStepsBtn.classList.toggle('active',  tab === 'steps');
         tabGymBtn.classList.toggle('active',    tab === 'gym');
         try { localStorage.setItem('active_tab', tab); } catch(e) {}
       }
@@ -2279,12 +2294,13 @@
       tabDashBtn.addEventListener('click',   () => switchTab('dashboard'));
       tabHealthBtn.addEventListener('click', () => switchTab('health'));
       tabWaterBtn.addEventListener('click',  () => switchTab('water'));
+      tabStepsBtn.addEventListener('click',  () => switchTab('steps'));
       tabGymBtn.addEventListener('click',    () => switchTab('gym'));
 
       // Restore last active tab on page load
       try {
         const saved = localStorage.getItem('active_tab');
-        if (['health','water','gym'].includes(saved)) switchTab(saved);
+        if (['health','water','steps','gym'].includes(saved)) switchTab(saved);
       } catch(e) {}
     })();
   </script>
