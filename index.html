@@ -1150,7 +1150,8 @@
         <div class="mini-bar-track">
           <div class="mini-bar-fill" id="dashWaterBar" style="background:#7DD3FC"></div>
         </div>
-        <div class="mini-widget-sub" id="dashStackSub">— supplements</div>
+        <div class="mini-widget-value" id="dashStackValue" style="margin-top:6px">—</div>
+        <div class="mini-widget-sub" id="dashStackSub">supplements taken</div>
       </div>
 
       <div class="mini-widget">
@@ -1843,13 +1844,18 @@
           });
           const takenCount = dueItems.filter(i => taken[i.id]).length;
           const total = dueItems.length;
-          const stackEl = document.getElementById('dashStackSub');
+          const stackVal = document.getElementById('dashStackValue');
+          const stackSub = document.getElementById('dashStackSub');
           if (total > 0) {
-            stackEl.textContent = `${takenCount}/${total} supplements taken`;
-            stackEl.style.color = takenCount >= total ? '#6EE7B7' : 'var(--text-secondary)';
+            stackVal.textContent = `${takenCount}/${total}`;
+            stackVal.style.color = takenCount >= total ? '#6EE7B7' : 'var(--text-primary, #fff)';
+            stackSub.textContent = 'supplements taken';
+            stackSub.style.color = '';
           } else {
-            stackEl.textContent = 'no supplements set';
-            stackEl.style.color = 'var(--text-tertiary)';
+            stackVal.textContent = '—';
+            stackVal.style.color = 'var(--text-tertiary)';
+            stackSub.textContent = 'no supplements set';
+            stackSub.style.color = 'var(--text-tertiary)';
           }
         } catch (_) {}
 
