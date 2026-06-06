@@ -1064,12 +1064,12 @@ html, body {
     try { return { [LS_KEY]: JSON.parse(raw) }; } catch { return {}; }
   }
 
-  function wsApply(remote) {
+  function wsApply(remote, forceRender = false) {
     if (!remote || typeof remote !== 'object') return false;
     const val = remote[LS_KEY];
     if (val == null) return false;
     const inc = JSON.stringify(val);
-    if (localStorage.getItem(LS_KEY) === inc) return false;
+    if (!forceRender && localStorage.getItem(LS_KEY) === inc) return false;
     wsSuppressSync = true;
     try {
       _wsOrigSet(LS_KEY, inc);
@@ -1120,9 +1120,9 @@ html, body {
     try {
       const { data, error } = await wsSupa.from('app_state')
         .select('data').eq('key', WS_APP_KEY).maybeSingle();
-      if (!error && data && data.data && Object.keys(data.data).length > 0) {
+      if (!error && data && data.data) {
         wsLastJson = JSON.stringify(data.data);
-        wsApply(data.data);
+        wsApply(data.data, true);
       } else if (Object.keys(wsCollect()).length > 0) {
         wsSchedulePush();
       }

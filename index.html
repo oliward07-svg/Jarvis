@@ -2173,7 +2173,7 @@
         return out;
       }
 
-      function dbApply(remote) {
+      function dbApply(remote, forceRender = false) {
         if (!remote || typeof remote !== 'object') return false;
         dbSuppressSync = true;
         let changed = false;
@@ -2183,7 +2183,7 @@
             const inc = JSON.stringify(remote[k]);
             if (localStorage.getItem(k) !== inc) { localStorage.setItem(k, inc); changed = true; }
           }
-          if (changed) { window.dispatchEvent(new CustomEvent('goals-changed')); updateWidgets(); updateDayRing(); }
+          if (changed || forceRender) { window.dispatchEvent(new CustomEvent('goals-changed')); updateWidgets(); updateDayRing(); }
         } finally { dbSuppressSync = false; }
         return changed;
       }
@@ -2231,9 +2231,9 @@
         try {
           const { data, error } = await dbSupa.from('app_state')
             .select('data').eq('key', DB_APP_KEY).maybeSingle();
-          if (!error && data && data.data && Object.keys(data.data).length > 0) {
+          if (!error && data && data.data) {
             dbLastJson = JSON.stringify(data.data);
-            dbApply(data.data);
+            dbApply(data.data, true);
           } else if (Object.keys(dbCollect()).length > 0) {
             dbSchedulePush();
           }

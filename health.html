@@ -1101,7 +1101,7 @@ main {
     return out;
   }
 
-  function hsApply(remote) {
+  function hsApply(remote, forceRender = false) {
     if (!remote || typeof remote !== 'object') return false;
     hsSuppressSync = true;
     let changed = false;
@@ -1117,7 +1117,7 @@ main {
         if (k && k.startsWith('stack:') && !(k in remote)) toRm.push(k);
       }
       for (const k of toRm) { _hsRm(k); changed = true; }
-      if (changed) { todayKey = `stack:taken:${getActiveDate()}`; render(); }
+      if (changed || forceRender) { todayKey = `stack:taken:${getActiveDate()}`; render(); }
     } finally { hsSuppressSync = false; }
     return changed;
   }
@@ -1163,9 +1163,9 @@ main {
     try {
       const { data, error } = await hsSupa.from('app_state')
         .select('data').eq('key', HS_APP_KEY).maybeSingle();
-      if (!error && data && data.data && Object.keys(data.data).length > 0) {
+      if (!error && data && data.data) {
         hsLastJson = JSON.stringify(data.data);
-        hsApply(data.data);
+        hsApply(data.data, true);
       } else if (Object.keys(hsCollect()).length > 0) {
         hsSchedulePush();
       }
