@@ -1098,8 +1098,6 @@ main {
         if (v != null) { try { out[k] = JSON.parse(v); } catch { out[k] = v; } }
       }
     }
-    const w = localStorage.getItem('po_water_v1');
-    if (w != null) { try { out['po_water_v1'] = JSON.parse(w); } catch {} }
     return out;
   }
 
@@ -1119,10 +1117,6 @@ main {
         if (k && k.startsWith('stack:') && !(k in remote)) toRm.push(k);
       }
       for (const k of toRm) { _hsRm(k); changed = true; }
-      if ('po_water_v1' in remote) {
-        const inc = JSON.stringify(remote['po_water_v1']);
-        if (localStorage.getItem('po_water_v1') !== inc) _hsSet('po_water_v1', inc);
-      }
       if (changed) { todayKey = `stack:taken:${getActiveDate()}`; render(); }
     } finally { hsSuppressSync = false; }
     return changed;

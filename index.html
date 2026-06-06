@@ -1937,9 +1937,11 @@
       }
       function saveSleepLog(bedtime, waketime) {
         localStorage.setItem('sleep_v1', JSON.stringify({ bedtime, waketime, date: getActiveDateString() }));
+        dbSchedulePush();
       }
       function clearSleepLog() {
         localStorage.removeItem('sleep_v1');
+        dbSchedulePush();
       }
       function calcSleepHours(bedtime, waketime) {
         const [bh, bm] = bedtime.split(':').map(Number);
@@ -2163,7 +2165,7 @@
         const out = {};
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
-          if (k && (k.startsWith('goals:') || k === 'goal_streak_v1')) {
+          if (k && (k.startsWith('goals:') || k === 'goal_streak_v1' || k === 'sleep_v1' || k === 'steps_v1')) {
             const v = localStorage.getItem(k);
             if (v != null) { try { out[k] = JSON.parse(v); } catch { out[k] = v; } }
           }
@@ -2177,11 +2179,11 @@
         let changed = false;
         try {
           for (const k of Object.keys(remote)) {
-            if (!k.startsWith('goals:') && k !== 'goal_streak_v1') continue;
+            if (!k.startsWith('goals:') && k !== 'goal_streak_v1' && k !== 'sleep_v1' && k !== 'steps_v1') continue;
             const inc = JSON.stringify(remote[k]);
             if (localStorage.getItem(k) !== inc) { localStorage.setItem(k, inc); changed = true; }
           }
-          if (changed) { window.dispatchEvent(new CustomEvent('goals-changed')); updateWidgets(); }
+          if (changed) { window.dispatchEvent(new CustomEvent('goals-changed')); updateWidgets(); updateDayRing(); }
         } finally { dbSuppressSync = false; }
         return changed;
       }
@@ -2250,6 +2252,7 @@
           sd[todayKey] = count || 0;
           localStorage.setItem('steps_v1', JSON.stringify(sd));
           updateWidgets();
+          dbSchedulePush();
         }
         try {
           const { data: sData, error: sErr } = await dbSupa.from('steps')

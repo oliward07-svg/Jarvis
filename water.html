@@ -455,6 +455,7 @@ html, body {
   .water-num { font-size: 48px; }
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="topbar.js" defer></script>
 </head>
 <body>
@@ -1038,6 +1039,101 @@ html, body {
   }
 
   renderAll();
+
+  // ====== CLOUD SYNC ======
+  const WS_URL = 'https://mqomgwngveilyqefoqim.supabase.co';
+  const WS_KEY = 'sb_publishable_2LXuJclhmFh553PyxeKTBQ_VluozYr5';
+  const WS_APP_KEY = 'water';
+  let wsSupa = null, wsPushTimer = null, wsSuppressSync = false, wsLastJson = null;
+
+  // Intercept writes to po_water_v1 and schedule a push
+  const _wsOrigSet = localStorage.setItem.bind(localStorage);
+  const _wsOrigRm  = localStorage.removeItem.bind(localStorage);
+  localStorage.setItem = function(k, v) {
+    _wsOrigSet(k, v);
+    if (!wsSuppressSync && k === LS_KEY) wsSchedulePush();
+  };
+  localStorage.removeItem = function(k) {
+    _wsOrigRm(k);
+    if (!wsSuppressSync && k === LS_KEY) wsSchedulePush();
+  };
+
+  function wsCollect() {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return {};
+    try { return { [LS_KEY]: JSON.parse(raw) }; } catch { return {}; }
+  }
+
+  function wsApply(remote) {
+    if (!remote || typeof remote !== 'object') return false;
+    const val = remote[LS_KEY];
+    if (val == null) return false;
+    const inc = JSON.stringify(val);
+    if (localStorage.getItem(LS_KEY) === inc) return false;
+    wsSuppressSync = true;
+    try {
+      _wsOrigSet(LS_KEY, inc);
+      state = normalize(JSON.parse(inc));
+      renderAll();
+    } finally { wsSuppressSync = false; }
+    return true;
+  }
+
+  async function wsPushNow() {
+    if (!wsSupa) return;
+    const snap = wsCollect(), json = JSON.stringify(snap);
+    if (json === wsLastJson) return;
+    try {
+      const { error } = await wsSupa.from('app_state')
+        .upsert({ key: WS_APP_KEY, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      if (!error) wsLastJson = json;
+    } catch (_) {}
+  }
+
+  function wsSchedulePush() {
+    if (wsSuppressSync) return;
+    clearTimeout(wsPushTimer);
+    wsPushTimer = setTimeout(wsPushNow, 250);
+  }
+
+  window.addEventListener('beforeunload', () => {
+    if (!wsSupa) return;
+    const snap = wsCollect(), json = JSON.stringify(snap);
+    if (json === wsLastJson) return;
+    try {
+      fetch(WS_URL + '/rest/v1/app_state?on_conflict=key', {
+        method: 'POST',
+        headers: { 'apikey': WS_KEY, 'Authorization': 'Bearer ' + WS_KEY,
+          'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ key: WS_APP_KEY, data: snap, updated_at: new Date().toISOString() }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (_) {}
+  });
+
+  (async function wsInitSync() {
+    if (!window.supabase) return;
+    wsSupa = window.supabase.createClient(WS_URL, WS_KEY);
+    try {
+      const { data, error } = await wsSupa.from('app_state')
+        .select('data').eq('key', WS_APP_KEY).maybeSingle();
+      if (!error && data && data.data && Object.keys(data.data).length > 0) {
+        wsLastJson = JSON.stringify(data.data);
+        wsApply(data.data);
+      } else if (Object.keys(wsCollect()).length > 0) {
+        wsSchedulePush();
+      }
+    } catch (_) {}
+    wsSupa.channel('ws_state')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state',
+        filter: 'key=eq.' + WS_APP_KEY }, (payload) => {
+        if (!payload.new || !payload.new.data) return;
+        const inc = JSON.stringify(payload.new.data);
+        if (inc === wsLastJson) return;
+        wsLastJson = inc;
+        wsApply(payload.new.data);
+      }).subscribe();
+  })();
 })();
 </script>
 <style>
