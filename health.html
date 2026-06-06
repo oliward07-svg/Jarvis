@@ -1139,8 +1139,8 @@ main {
     hsPushTimer = setTimeout(hsPushNow, 250);
   }
 
-  window.addEventListener('beforeunload', () => {
-    if (!hsSupa) return;
+  function hsFlushSync() {
+    if (!hsSupa || hsSuppressSync) return;
     const snap = hsCollect(), json = JSON.stringify(snap);
     if (json === hsLastJson) return;
     try {
@@ -1150,9 +1150,12 @@ main {
           'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
         body: JSON.stringify({ key: HS_APP_KEY, data: snap, updated_at: new Date().toISOString() }),
         keepalive: true,
-      }).catch(() => {});
+      }).then(() => { hsLastJson = json; }).catch(() => {});
     } catch (_) {}
-  });
+  }
+  window.addEventListener('beforeunload', hsFlushSync);
+  window.addEventListener('pagehide', hsFlushSync);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) hsFlushSync(); });
 
   (async function hsInitSync() {
     if (!window.supabase) return;

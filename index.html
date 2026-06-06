@@ -2207,8 +2207,8 @@
 
       window.addEventListener('goals-changed', () => { if (!dbSuppressSync) dbSchedulePush(); });
 
-      window.addEventListener('beforeunload', () => {
-        if (!dbSupa) return;
+      function dbFlushSync() {
+        if (!dbSupa || dbSuppressSync) return;
         const snap = dbCollect(), json = JSON.stringify(snap);
         if (json === dbLastJson) return;
         try {
@@ -2218,9 +2218,12 @@
               'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
             body: JSON.stringify({ key: DB_APP_KEY, data: snap, updated_at: new Date().toISOString() }),
             keepalive: true,
-          }).catch(() => {});
+          }).then(() => { dbLastJson = json; }).catch(() => {});
         } catch (_) {}
-      });
+      }
+      window.addEventListener('beforeunload', dbFlushSync);
+      window.addEventListener('pagehide', dbFlushSync);
+      document.addEventListener('visibilitychange', () => { if (document.hidden) dbFlushSync(); });
 
       (async function dbInitSync() {
         if (!window.supabase) return;

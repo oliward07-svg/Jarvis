@@ -1096,8 +1096,8 @@ html, body {
     wsPushTimer = setTimeout(wsPushNow, 250);
   }
 
-  window.addEventListener('beforeunload', () => {
-    if (!wsSupa) return;
+  function wsFlushSync() {
+    if (!wsSupa || wsSuppressSync) return;
     const snap = wsCollect(), json = JSON.stringify(snap);
     if (json === wsLastJson) return;
     try {
@@ -1107,9 +1107,12 @@ html, body {
           'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
         body: JSON.stringify({ key: WS_APP_KEY, data: snap, updated_at: new Date().toISOString() }),
         keepalive: true,
-      }).catch(() => {});
+      }).then(() => { wsLastJson = json; }).catch(() => {});
     } catch (_) {}
-  });
+  }
+  window.addEventListener('beforeunload', wsFlushSync);
+  window.addEventListener('pagehide', wsFlushSync);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) wsFlushSync(); });
 
   (async function wsInitSync() {
     if (!window.supabase) return;
