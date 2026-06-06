@@ -12,8 +12,8 @@
   'use strict';
 
   // -------- Supabase config (same project as the rest of the dashboard) --------
-  const TOPBAR_SUPABASE_URL = 'PASTE-YOUR-SUPABASE-PROJECT-URL-HERE';
-  const TOPBAR_SUPABASE_KEY = 'PASTE-YOUR-SUPABASE-PUBLISHABLE-KEY-HERE';
+  const TOPBAR_SUPABASE_URL = 'https://mqomgwngveilyqefoqim.supabase.co';
+  const TOPBAR_SUPABASE_KEY = 'sb_publishable_2LXuJclhmFh553PyxeKTBQ_VluozYr5';
 
   // -------- CSS --------
   const css = `

@@ -448,6 +448,7 @@ main {
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="topbar.js" defer></script>
 </head>
 <body>
@@ -1010,6 +1011,118 @@ main {
 
   render();
   startTicker();
+
+  // ====== CLOUD SYNC ======
+  const HS_URL = 'https://mqomgwngveilyqefoqim.supabase.co';
+  const HS_KEY = 'sb_publishable_2LXuJclhmFh553PyxeKTBQ_VluozYr5';
+  const HS_APP_KEY = 'health';
+  let hsSupa = null, hsPushTimer = null, hsSuppressSync = false, hsLastJson = null;
+
+  const _hsSet = localStorage.setItem.bind(localStorage);
+  const _hsRm  = localStorage.removeItem.bind(localStorage);
+  localStorage.setItem = function(k, v) {
+    _hsSet(k, v);
+    try { if (!hsSuppressSync && k.startsWith('stack:')) hsSchedulePush(); } catch (_) {}
+  };
+  localStorage.removeItem = function(k) {
+    _hsRm(k);
+    try { if (!hsSuppressSync && k.startsWith('stack:')) hsSchedulePush(); } catch (_) {}
+  };
+
+  function hsCollect() {
+    const out = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('stack:')) {
+        const v = localStorage.getItem(k);
+        if (v != null) { try { out[k] = JSON.parse(v); } catch { out[k] = v; } }
+      }
+    }
+    const w = localStorage.getItem('po_water_v1');
+    if (w != null) { try { out['po_water_v1'] = JSON.parse(w); } catch {} }
+    return out;
+  }
+
+  function hsApply(remote) {
+    if (!remote || typeof remote !== 'object') return false;
+    hsSuppressSync = true;
+    let changed = false;
+    try {
+      for (const k of Object.keys(remote)) {
+        if (!k.startsWith('stack:')) continue;
+        const inc = JSON.stringify(remote[k]);
+        if (localStorage.getItem(k) !== inc) { _hsSet(k, inc); changed = true; }
+      }
+      const toRm = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('stack:') && !(k in remote)) toRm.push(k);
+      }
+      for (const k of toRm) { _hsRm(k); changed = true; }
+      if ('po_water_v1' in remote) {
+        const inc = JSON.stringify(remote['po_water_v1']);
+        if (localStorage.getItem('po_water_v1') !== inc) _hsSet('po_water_v1', inc);
+      }
+      if (changed) { todayKey = `stack:taken:${getActiveDate()}`; render(); }
+    } finally { hsSuppressSync = false; }
+    return changed;
+  }
+
+  async function hsPushNow() {
+    if (!hsSupa) return;
+    const snap = hsCollect(), json = JSON.stringify(snap);
+    if (json === hsLastJson) return;
+    try {
+      const { error } = await hsSupa.from('app_state')
+        .upsert({ key: HS_APP_KEY, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      if (!error) hsLastJson = json;
+    } catch (_) {}
+  }
+
+  function hsSchedulePush() {
+    if (hsSuppressSync) return;
+    clearTimeout(hsPushTimer);
+    hsPushTimer = setTimeout(hsPushNow, 250);
+  }
+
+  window.addEventListener('beforeunload', () => {
+    if (!hsSupa) return;
+    const snap = hsCollect(), json = JSON.stringify(snap);
+    if (json === hsLastJson) return;
+    try {
+      fetch(HS_URL + '/rest/v1/app_state?on_conflict=key', {
+        method: 'POST',
+        headers: { 'apikey': HS_KEY, 'Authorization': 'Bearer ' + HS_KEY,
+          'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ key: HS_APP_KEY, data: snap, updated_at: new Date().toISOString() }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (_) {}
+  });
+
+  (async function hsInitSync() {
+    if (!window.supabase) return;
+    hsSupa = window.supabase.createClient(HS_URL, HS_KEY);
+    try {
+      const { data, error } = await hsSupa.from('app_state')
+        .select('data').eq('key', HS_APP_KEY).maybeSingle();
+      if (!error && data && data.data && Object.keys(data.data).length > 0) {
+        hsLastJson = JSON.stringify(data.data);
+        hsApply(data.data);
+      } else if (Object.keys(hsCollect()).length > 0) {
+        hsSchedulePush();
+      }
+    } catch (_) {}
+    hsSupa.channel('hs_state')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state',
+        filter: 'key=eq.' + HS_APP_KEY }, (payload) => {
+        if (!payload.new || !payload.new.data) return;
+        const inc = JSON.stringify(payload.new.data);
+        if (inc === hsLastJson) return;
+        hsLastJson = inc;
+        hsApply(payload.new.data);
+      }).subscribe();
+  })();
 })();
 </script>
 

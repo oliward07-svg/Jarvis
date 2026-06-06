@@ -1041,6 +1041,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     (() => {
       const ANTHROPIC_API_KEY = '';
@@ -1811,6 +1812,97 @@
       }
 
       document.addEventListener('DOMContentLoaded', init);
+
+      // ====== CLOUD SYNC ======
+      const DB_URL = 'https://mqomgwngveilyqefoqim.supabase.co';
+      const DB_KEY = 'sb_publishable_2LXuJclhmFh553PyxeKTBQ_VluozYr5';
+      const DB_APP_KEY = 'dashboard';
+      let dbSupa = null, dbPushTimer = null, dbSuppressSync = false, dbLastJson = null;
+
+      function dbCollect() {
+        const out = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith('goals:') || k === 'goal_streak_v1')) {
+            const v = localStorage.getItem(k);
+            if (v != null) { try { out[k] = JSON.parse(v); } catch { out[k] = v; } }
+          }
+        }
+        return out;
+      }
+
+      function dbApply(remote) {
+        if (!remote || typeof remote !== 'object') return false;
+        dbSuppressSync = true;
+        let changed = false;
+        try {
+          for (const k of Object.keys(remote)) {
+            if (!k.startsWith('goals:') && k !== 'goal_streak_v1') continue;
+            const inc = JSON.stringify(remote[k]);
+            if (localStorage.getItem(k) !== inc) { localStorage.setItem(k, inc); changed = true; }
+          }
+          if (changed) window.dispatchEvent(new CustomEvent('goals-changed'));
+        } finally { dbSuppressSync = false; }
+        return changed;
+      }
+
+      async function dbPushNow() {
+        if (!dbSupa) return;
+        const snap = dbCollect(), json = JSON.stringify(snap);
+        if (json === dbLastJson) return;
+        try {
+          const { error } = await dbSupa.from('app_state')
+            .upsert({ key: DB_APP_KEY, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+          if (!error) dbLastJson = json;
+        } catch (_) {}
+      }
+
+      function dbSchedulePush() {
+        if (dbSuppressSync) return;
+        clearTimeout(dbPushTimer);
+        dbPushTimer = setTimeout(dbPushNow, 250);
+      }
+
+      window.addEventListener('goals-changed', () => { if (!dbSuppressSync) dbSchedulePush(); });
+
+      window.addEventListener('beforeunload', () => {
+        if (!dbSupa) return;
+        const snap = dbCollect(), json = JSON.stringify(snap);
+        if (json === dbLastJson) return;
+        try {
+          fetch(DB_URL + '/rest/v1/app_state?on_conflict=key', {
+            method: 'POST',
+            headers: { 'apikey': DB_KEY, 'Authorization': 'Bearer ' + DB_KEY,
+              'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+            body: JSON.stringify({ key: DB_APP_KEY, data: snap, updated_at: new Date().toISOString() }),
+            keepalive: true,
+          }).catch(() => {});
+        } catch (_) {}
+      });
+
+      (async function dbInitSync() {
+        if (!window.supabase) return;
+        dbSupa = window.supabase.createClient(DB_URL, DB_KEY);
+        try {
+          const { data, error } = await dbSupa.from('app_state')
+            .select('data').eq('key', DB_APP_KEY).maybeSingle();
+          if (!error && data && data.data && Object.keys(data.data).length > 0) {
+            dbLastJson = JSON.stringify(data.data);
+            dbApply(data.data);
+          } else if (Object.keys(dbCollect()).length > 0) {
+            dbSchedulePush();
+          }
+        } catch (_) {}
+        dbSupa.channel('db_state')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state',
+            filter: 'key=eq.' + DB_APP_KEY }, (payload) => {
+            if (!payload.new || !payload.new.data) return;
+            const inc = JSON.stringify(payload.new.data);
+            if (inc === dbLastJson) return;
+            dbLastJson = inc;
+            dbApply(payload.new.data);
+          }).subscribe();
+      })();
     })();
 
     // ===== Tab switching =====
