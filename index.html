@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Oliver's Dashboard</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#050506" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Jarvis" />
   <style>
     :root {
       color-scheme: dark;
@@ -230,11 +235,14 @@
 
     .day-ring-row {
       display: flex;
-      justify-content: center;
+      gap: 14px;
       margin-bottom: 24px;
+      align-items: stretch;
+      flex-wrap: wrap;
     }
 
     .day-ring-card {
+      flex: 2 1 300px;
       display: flex;
       gap: 26px;
       flex-wrap: wrap;
@@ -246,6 +254,71 @@
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
       position: relative;
       overflow: hidden;
+    }
+
+    .mini-widget {
+      flex: 1 1 130px;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 18px 16px 16px;
+      backdrop-filter: blur(24px) saturate(1.2);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .mini-widget-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .mini-widget-icon { font-size: 13px; }
+
+    .mini-widget-title {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+    }
+
+    .mini-widget-value {
+      font-family: var(--font-mono);
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+      line-height: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: color 0.4s;
+    }
+
+    .mini-widget-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .mini-bar-track {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .mini-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s;
     }
 
     .ring-visual {
@@ -1066,6 +1139,27 @@
           <button id="sleepClearBtn" class="sleep-clear-btn" style="display:none">Clear log</button>
         </div>
       </div>
+
+      <div class="mini-widget">
+        <div class="mini-widget-header">
+          <span class="mini-widget-icon">💧</span>
+          <span class="mini-widget-title">Water</span>
+        </div>
+        <div class="mini-widget-value" id="dashWaterValue">— / —</div>
+        <div class="mini-widget-sub" id="dashWaterSub">bottles today</div>
+        <div class="mini-bar-track">
+          <div class="mini-bar-fill" id="dashWaterBar" style="background:#7DD3FC"></div>
+        </div>
+      </div>
+
+      <div class="mini-widget">
+        <div class="mini-widget-header">
+          <span class="mini-widget-icon">🏋️</span>
+          <span class="mini-widget-title">Gym</span>
+        </div>
+        <div class="mini-widget-value" id="dashGymValue">—</div>
+        <div class="mini-widget-sub" id="dashGymSub">no program</div>
+      </div>
     </div>
 
     <div class="section">
@@ -1703,6 +1797,68 @@
         renderListInto(goals, elements.tomorrowList, elements.tomorrowEmptyState, 'tomorrow', true, tomorrowKey);
       }
 
+      function updateWidgets() {
+        // ---- Water ----
+        try {
+          const ws = JSON.parse(localStorage.getItem('po_water_v1') || 'null');
+          const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+          const done = ws ? ((ws.logs || {})[todayKey] || 0) : 0;
+          let total = 8; let unitLabel = 'bottles';
+          if (ws) {
+            const p = ws.profile || {};
+            const wKg = ws.weightUnit === 'lb' ? (p.weightKg || 75) / 2.20462 : (p.weightKg || 75);
+            const totalMl = wKg * 35
+              + (p.activityHrsPerWeek || 0) / 7 * 500
+              + Math.max(0, (ws.caffeineMgPerDay || 0) - 200) * 1.5
+              + (ws.substances || []).reduce((s, x) => s + Math.max(0, ((x && x.dose != null ? x.dose : (x && x.defaultDose)) || 0) * ((x && x.mlPerUnit) || 0)), 0)
+              + (p.sex === 'm' ? 200 : 0)
+              + ((p.age || 0) >= 50 ? 100 : 0);
+            let unitVol = ws.bottleMl || 500;
+            if (ws.unit === 'glass') { unitVol = ws.glassMl || 250; unitLabel = 'glasses'; }
+            else if (ws.unit === 'oz') { unitVol = 30; unitLabel = 'oz'; }
+            else if (ws.unit === 'ml') { unitVol = 1; unitLabel = 'ml'; }
+            total = Math.max(1, Math.ceil(totalMl / unitVol));
+          }
+          document.getElementById('dashWaterValue').textContent = `${done} / ${total}`;
+          document.getElementById('dashWaterSub').textContent = unitLabel + ' today';
+          const pct = Math.min(100, total > 0 ? (done / total) * 100 : 0);
+          const bar = document.getElementById('dashWaterBar');
+          bar.style.width = pct + '%';
+          bar.style.background = done >= total ? '#6EE7B7' : '#7DD3FC';
+        } catch (_) {}
+
+        // ---- Gym ----
+        try {
+          const gs = JSON.parse(localStorage.getItem('po_coach_v1') || 'null');
+          const doneDays = JSON.parse(localStorage.getItem('po_coach_workout_done') || '{}');
+          const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+          const valueEl = document.getElementById('dashGymValue');
+          const subEl = document.getElementById('dashGymSub');
+          let splitName = null;
+          if (gs && gs.splitRotation && gs.splitRotation.length && gs.splitAnchor && gs.splitAnchor.date) {
+            const rot = gs.splitRotation;
+            const a = new Date(gs.splitAnchor.date); const t = new Date();
+            a.setHours(0,0,0,0); t.setHours(0,0,0,0);
+            const diff = Math.round((t - a) / 86400000);
+            const startIdx = gs.splitAnchor.index != null ? gs.splitAnchor.index : 0;
+            splitName = rot[((startIdx + diff) % rot.length + rot.length) % rot.length];
+          }
+          const isRest = /^rest\b/i.test(splitName || '');
+          const done = !!doneDays[todayKey];
+          if (!splitName) {
+            valueEl.textContent = '—'; subEl.textContent = 'no program';
+            valueEl.style.color = 'var(--text-tertiary)';
+          } else if (isRest) {
+            valueEl.textContent = 'REST'; subEl.textContent = 'recovery day';
+            valueEl.style.color = 'var(--text-tertiary)';
+          } else {
+            valueEl.textContent = splitName.split(' ')[0].toUpperCase();
+            subEl.textContent = done ? '✓ done today' : 'up next';
+            valueEl.style.color = done ? '#6EE7B7' : 'var(--text-primary)';
+          }
+        } catch (_) {}
+      }
+
       function getSleepLog() {
         const data = storeGet('sleep_v1');
         if (!data || data.date !== getActiveDateString()) return null;
@@ -1898,7 +2054,8 @@
         loadTomorrow();
         startTicker();
         updateDayRing();
-        setInterval(updateDayRing, 60 * 1000);
+        updateWidgets();
+        setInterval(() => { updateDayRing(); updateWidgets(); }, 60 * 1000);
 
         document.getElementById('sleepLogBtn').addEventListener('click', () => {
           const bedtime = document.getElementById('sleepBedtime').value;
@@ -2051,6 +2208,11 @@
         if (['health','water','gym'].includes(saved)) switchTab(saved);
       } catch(e) {}
     })();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+    }
   </script>
 </body>
 </html>

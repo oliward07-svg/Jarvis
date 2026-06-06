@@ -1,0 +1,12 @@
+{
+  "name": "Oliver's Dashboard",
+  "short_name": "Jarvis",
+  "description": "Personal dashboard — goals, health, gym & water",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050506",
+  "theme_color": "#050506",
+  "icons": []
+}
