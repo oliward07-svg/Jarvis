@@ -1163,6 +1163,18 @@
         <div class="mini-widget-value" id="dashGymValue">—</div>
         <div class="mini-widget-sub" id="dashGymSub">no program</div>
       </div>
+
+      <div class="mini-widget">
+        <div class="mini-widget-header">
+          <span class="mini-widget-icon">👟</span>
+          <span class="mini-widget-title">Steps</span>
+        </div>
+        <div class="mini-widget-value" id="dashStepsValue">0</div>
+        <div class="mini-widget-sub" id="dashStepsSub">/ 10,000 goal</div>
+        <div class="mini-bar-track">
+          <div class="mini-bar-fill" id="dashStepsBar" style="background:#A78BFA"></div>
+        </div>
+      </div>
     </div>
 
     <div class="section">
@@ -1860,6 +1872,21 @@
           }
         } catch (_) {}
 
+        // ---- Steps ----
+        try {
+          const STEPS_GOAL = 10000;
+          const todayKey = getActiveDateString();
+          const sd = JSON.parse(localStorage.getItem('steps_v1') || 'null');
+          const count = (sd && sd[todayKey]) ? sd[todayKey] : 0;
+          const valEl = document.getElementById('dashStepsValue');
+          const barEl = document.getElementById('dashStepsBar');
+          valEl.textContent = count.toLocaleString();
+          valEl.style.color = count >= STEPS_GOAL ? '#6EE7B7' : 'var(--text-primary)';
+          document.getElementById('dashStepsSub').textContent = '/ 10,000 goal';
+          barEl.style.width = Math.min(100, (count / STEPS_GOAL) * 100) + '%';
+          barEl.style.background = count >= STEPS_GOAL ? '#6EE7B7' : '#A78BFA';
+        } catch (_) {}
+
         // ---- Gym ----
         try {
           const gs = JSON.parse(localStorage.getItem('po_coach_v1') || 'null');
@@ -2125,7 +2152,7 @@
         const out = {};
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
-          if (k && (k.startsWith('goals:') || k === 'goal_streak_v1')) {
+          if (k && (k.startsWith('goals:') || k === 'goal_streak_v1' || k === 'steps_v1')) {
             const v = localStorage.getItem(k);
             if (v != null) { try { out[k] = JSON.parse(v); } catch { out[k] = v; } }
           }
@@ -2139,11 +2166,11 @@
         let changed = false;
         try {
           for (const k of Object.keys(remote)) {
-            if (!k.startsWith('goals:') && k !== 'goal_streak_v1') continue;
+            if (!k.startsWith('goals:') && k !== 'goal_streak_v1' && k !== 'steps_v1') continue;
             const inc = JSON.stringify(remote[k]);
             if (localStorage.getItem(k) !== inc) { localStorage.setItem(k, inc); changed = true; }
           }
-          if (changed) window.dispatchEvent(new CustomEvent('goals-changed'));
+          if (changed) { window.dispatchEvent(new CustomEvent('goals-changed')); updateWidgets(); }
         } finally { dbSuppressSync = false; }
         return changed;
       }
