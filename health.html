@@ -431,6 +431,43 @@ main {
   color: var(--text-quaternary);
 }
 
+/* ====== NOT-DUE-TODAY SECTION ====== */
+.stack-not-due-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+}
+.stack-not-due-header {
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text-quaternary);
+  margin-bottom: 6px; padding: 0 4px;
+}
+.stack-not-due-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px; align-items: center;
+  padding: 7px 10px; border-radius: 8px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.stack-not-due-item:hover { opacity: 0.75; }
+.stack-not-due-name { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.stack-not-due-meta {
+  font-size: 11px; color: var(--text-tertiary);
+  font-family: var(--font-mono); white-space: nowrap;
+}
+
+/* ====== FREQUENCY ROW ====== */
+.stack-freq-row {
+  display: flex; gap: 8px; align-items: center; margin-top: 6px;
+}
+.stack-freq-label {
+  font-size: 12px; color: var(--text-tertiary);
+  font-family: var(--font-mono); white-space: nowrap;
+}
+
 @media (max-width: 600px) {
   main { padding: 40px 16px 60px; }
   .stack-card { padding: 18px 16px 14px; }
@@ -492,6 +529,14 @@ main {
           <option value="anytime">Anytime</option>
         </select>
         <button id="stackAddBtn" class="stack-add-btn">+ Add</button>
+      </div>
+      <div class="stack-freq-row">
+        <span class="stack-freq-label">Frequency:</span>
+        <select id="stackFreqType" class="stack-input stack-select" style="width:auto">
+          <option value="1">Daily</option>
+          <option value="x">Every X days</option>
+        </select>
+        <input id="stackFreqDays" type="number" min="2" max="365" value="3" class="stack-input" style="width:80px; display:none" placeholder="Days" />
       </div>
     </div>
   </div>
@@ -635,7 +680,17 @@ main {
 
   function toggleTaken(id) {
     const taken = getTaken();
-    if (taken[id]) delete taken[id]; else taken[id] = Date.now();
+    if (taken[id]) {
+      delete taken[id];
+    } else {
+      taken[id] = Date.now();
+      const items = getItems();
+      const item = items.find(i => i.id === id);
+      if (item && item.freqDays > 1) {
+        item.lastTakenDate = getActiveDate();
+        setItems(items);
+      }
+    }
     setTaken(taken); render();
   }
   function toggleLow(id) {
@@ -652,7 +707,7 @@ main {
     setLow(getLow().filter(x => x !== id));
     render();
   }
-  function addItem(name, dose, windowKey, note = '') {
+  function addItem(name, dose, windowKey, note = '', freqDays = 1) {
     const v = String(name || '').trim();
     if (!v) return;
     const items = getItems();
@@ -662,7 +717,9 @@ main {
       dose: String(dose || '').trim(),
       window: ['morning','lunch','evening','anytime'].includes(windowKey) ? windowKey : 'anytime',
       note: String(note || '').trim(),
-      tag: null, ordered: true
+      tag: null, ordered: true,
+      freqDays: Math.max(1, parseInt(freqDays) || 1),
+      lastTakenDate: null
     });
     setItems(items);
     render();
@@ -679,8 +736,9 @@ main {
     const items = getItems();
     const taken = getTaken();
     const low = getLow();
-    const totalCount = items.length;
-    const takenCount = items.filter(i => taken[i.id]).length;
+    const dueItems = items.filter(i => isItemDueToday(i));
+    const totalCount = dueItems.length;
+    const takenCount = dueItems.filter(i => taken[i.id]).length;
     document.getElementById('stackProgressText').textContent =
       `${takenCount} / ${totalCount} taken today · resets at 6 AM`;
     const pct = totalCount === 0 ? 0 : (takenCount / totalCount) * 100;
@@ -693,7 +751,7 @@ main {
     const nowHour = +_ukHP.find(x => x.type === 'hour').value + +_ukHP.find(x => x.type === 'minute').value / 60;
 
     STACK_WINDOWS.forEach(win => {
-      const winItems = items.filter(i => (i.window || 'anytime') === win.key);
+      const winItems = items.filter(i => (i.window || 'anytime') === win.key && (isItemDueToday(i) || taken[i.id]));
       if (winItems.length === 0) return;
 
       const group = document.createElement('div');
@@ -736,6 +794,25 @@ main {
       groupsEl.appendChild(group);
     });
 
+    // Not due today
+    const notDueItems = items.filter(i => !isItemDueToday(i) && !taken[i.id]);
+    if (notDueItems.length > 0) {
+      const section = document.createElement('div');
+      section.className = 'stack-not-due-section';
+      section.innerHTML = `<div class="stack-not-due-header">Not due today</div>`;
+      notDueItems.forEach(item => {
+        const daysLeft = daysUntilDue(item);
+        const row = document.createElement('div');
+        row.className = 'stack-not-due-item';
+        row.innerHTML = `
+          <div class="stack-not-due-name">${escapeHtml(item.name)}</div>
+          <div class="stack-not-due-meta">every ${item.freqDays}d · next in ${daysLeft}d</div>
+          <button class="stack-item-del" data-action="del" data-id="${item.id}" aria-label="Delete">×</button>`;
+        section.appendChild(row);
+      });
+      groupsEl.appendChild(section);
+    }
+
     if (groupsEl.children.length === 0) {
       groupsEl.innerHTML = `<div class="stack-window-empty">No items yet — add one below to start your stack.</div>`;
     }
@@ -759,6 +836,7 @@ main {
     const lowList = [];
 
     items.forEach(item => {
+      if (!isItemDueToday(item)) return;
       const win = STACK_WINDOWS.find(w => w.key === (item.window || 'anytime'));
       const isPastCutoff = win && win.cutoffHour !== null && nowHour > win.cutoffHour;
       const isTaken = !!taken[item.id];
@@ -824,10 +902,31 @@ main {
     tickerInterval = setInterval(cycleTicker, 5000);
   }
 
+  function isItemDueToday(item) {
+    const f = item.freqDays;
+    if (!f || f <= 1) return true;
+    if (!item.lastTakenDate) return true;
+    const today = getActiveDate();
+    const [y1,m1,d1] = today.split('-').map(Number);
+    const [y2,m2,d2] = item.lastTakenDate.split('-').map(Number);
+    const daysDiff = Math.round((Date.UTC(y1,m1-1,d1) - Date.UTC(y2,m2-1,d2)) / 86400000);
+    return daysDiff >= f;
+  }
+  function daysUntilDue(item) {
+    const f = item.freqDays;
+    if (!f || f <= 1 || !item.lastTakenDate) return 0;
+    const today = getActiveDate();
+    const [y1,m1,d1] = today.split('-').map(Number);
+    const [y2,m2,d2] = item.lastTakenDate.split('-').map(Number);
+    const daysDiff = Math.round((Date.UTC(y1,m1-1,d1) - Date.UTC(y2,m2-1,d2)) / 86400000);
+    return Math.max(0, f - daysDiff);
+  }
+
   function metaText(item) {
     const parts = [];
     if (item.dose) parts.push(item.dose);
     if (item.note) parts.push(item.note);
+    if (item.freqDays > 1) parts.push(`every ${item.freqDays} days`);
     return parts.join(' · ');
   }
   function escapeHtml(str) {
@@ -919,6 +1018,11 @@ main {
   const winSelect = document.getElementById('stackAddWindow');
   const addBtn = document.getElementById('stackAddBtn');
   const resultsEl = document.getElementById('stackSearchResults');
+  const freqTypeSelect = document.getElementById('stackFreqType');
+  const freqDaysInput = document.getElementById('stackFreqDays');
+  freqTypeSelect.addEventListener('change', () => {
+    freqDaysInput.style.display = freqTypeSelect.value === 'x' ? '' : 'none';
+  });
 
   let pendingNote = '';
 
@@ -982,10 +1086,13 @@ main {
   });
 
   addBtn.addEventListener('click', () => {
-    addItem(nameInput.value, doseInput.value, winSelect.value, pendingNote);
+    const freqDays = freqTypeSelect.value === 'x' ? Math.max(2, parseInt(freqDaysInput.value) || 2) : 1;
+    addItem(nameInput.value, doseInput.value, winSelect.value, pendingNote, freqDays);
     nameInput.value = '';
     doseInput.value = '';
     pendingNote = '';
+    freqTypeSelect.value = '1';
+    freqDaysInput.style.display = 'none';
     resultsEl.hidden = true;
     nameInput.focus();
   });
