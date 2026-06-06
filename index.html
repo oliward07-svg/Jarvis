@@ -809,6 +809,51 @@
       outline-offset: 2px;
     }
 
+    /* ===== Tab bar ===== */
+    .tab-bar {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 22px;
+      padding: 5px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      width: fit-content;
+    }
+
+    .tab-btn {
+      padding: 8px 20px;
+      border-radius: 9px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: background 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .tab-btn:hover { color: var(--text-primary); }
+
+    .tab-btn.active {
+      background: linear-gradient(180deg, #ffffff 0%, #e8e5dd 100%);
+      color: #0a0a0b;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    #tab-gym { display: none; }
+
+    #tab-gym-frame {
+      width: 100%;
+      height: calc(100vh - 110px);
+      border: none;
+      border-radius: 16px;
+      background: #0a0a0b;
+    }
+
     @media (max-width: 480px) {
       body {
         padding-top: 18px;
@@ -870,6 +915,12 @@
 </head>
 <body>
   <div class="page-shell">
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tabDashBtn">Dashboard</button>
+      <button class="tab-btn" id="tabGymBtn">Gym</button>
+    </div>
+
+    <div id="tab-dashboard">
     <h1 class="dash-title">Oliver's Dashboard</h1>
 
     <div class="ticker-row">
@@ -970,6 +1021,11 @@
         </div>
         <div id="tomorrowStatus" class="polish-status"></div>
       </div>
+    </div>
+    </div><!-- /tab-dashboard -->
+
+    <div id="tab-gym">
+      <iframe id="tab-gym-frame" src="gym.html" title="Gym Tracker"></iframe>
     </div>
   </div>
 
@@ -1745,6 +1801,32 @@
       }
 
       document.addEventListener('DOMContentLoaded', init);
+    })();
+
+    // ===== Tab switching =====
+    (function() {
+      const tabDashBtn = document.getElementById('tabDashBtn');
+      const tabGymBtn  = document.getElementById('tabGymBtn');
+      const tabDash    = document.getElementById('tab-dashboard');
+      const tabGym     = document.getElementById('tab-gym');
+
+      function switchTab(tab) {
+        const isGym = tab === 'gym';
+        tabDash.style.display = isGym ? 'none' : '';
+        tabGym.style.display  = isGym ? 'block' : 'none';
+        tabDashBtn.classList.toggle('active', !isGym);
+        tabGymBtn.classList.toggle('active', isGym);
+        try { localStorage.setItem('active_tab', tab); } catch(e) {}
+      }
+
+      tabDashBtn.addEventListener('click', () => switchTab('dashboard'));
+      tabGymBtn.addEventListener('click',  () => switchTab('gym'));
+
+      // Restore last active tab on page load
+      try {
+        const saved = localStorage.getItem('active_tab');
+        if (saved === 'gym') switchTab('gym');
+      } catch(e) {}
     })();
   </script>
 </body>
