@@ -846,6 +846,7 @@
 
     #tab-gym { display: none; }
     #tab-health { display: none; }
+    #tab-water { display: none; }
 
     #tab-gym-frame {
       width: 100%;
@@ -919,6 +920,7 @@
     <div class="tab-bar">
       <button class="tab-btn active" id="tabDashBtn">Dashboard</button>
       <button class="tab-btn" id="tabHealthBtn">Health</button>
+      <button class="tab-btn" id="tabWaterBtn">Water</button>
       <button class="tab-btn" id="tabGymBtn">Gym</button>
     </div>
 
@@ -1028,6 +1030,10 @@
 
     <div id="tab-health">
       <iframe id="tab-health-frame" src="health.html" title="Health Tracker" style="width:100%;height:calc(100vh - 110px);border:none;border-radius:16px;background:#050506;"></iframe>
+    </div>
+
+    <div id="tab-water">
+      <iframe id="tab-water-frame" src="water.html" title="Water Coach" style="width:100%;height:calc(100vh - 110px);border:none;border-radius:16px;background:#0a0a0b;"></iframe>
     </div>
 
     <div id="tab-gym">
@@ -1813,29 +1819,34 @@
     (function() {
       const tabDashBtn   = document.getElementById('tabDashBtn');
       const tabHealthBtn = document.getElementById('tabHealthBtn');
+      const tabWaterBtn  = document.getElementById('tabWaterBtn');
       const tabGymBtn    = document.getElementById('tabGymBtn');
       const tabDash      = document.getElementById('tab-dashboard');
       const tabHealth    = document.getElementById('tab-health');
+      const tabWater     = document.getElementById('tab-water');
       const tabGym       = document.getElementById('tab-gym');
 
       function switchTab(tab) {
         tabDash.style.display   = tab === 'dashboard' ? '' : 'none';
         tabHealth.style.display = tab === 'health'    ? 'block' : 'none';
+        tabWater.style.display  = tab === 'water'     ? 'block' : 'none';
         tabGym.style.display    = tab === 'gym'       ? 'block' : 'none';
         tabDashBtn.classList.toggle('active',   tab === 'dashboard');
         tabHealthBtn.classList.toggle('active', tab === 'health');
+        tabWaterBtn.classList.toggle('active',  tab === 'water');
         tabGymBtn.classList.toggle('active',    tab === 'gym');
         try { localStorage.setItem('active_tab', tab); } catch(e) {}
       }
 
       tabDashBtn.addEventListener('click',   () => switchTab('dashboard'));
       tabHealthBtn.addEventListener('click', () => switchTab('health'));
+      tabWaterBtn.addEventListener('click',  () => switchTab('water'));
       tabGymBtn.addEventListener('click',    () => switchTab('gym'));
 
       // Restore last active tab on page load
       try {
         const saved = localStorage.getItem('active_tab');
-        if (saved === 'health' || saved === 'gym') switchTab(saved);
+        if (['health','water','gym'].includes(saved)) switchTab(saved);
       } catch(e) {}
     })();
   </script>
