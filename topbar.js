@@ -187,19 +187,17 @@ body.topbar-modal-open {
   }
 
   // -------- Active-date helpers (match the goals page 6 AM rollover) --------
+  function ukHourNow() {
+    return +new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: 'numeric', hour12: false }).format(new Date());
+  }
   function activeDateKey() {
     const now = new Date();
-    const d = new Date(now);
-    if (now.getHours() < 6) d.setDate(d.getDate() - 1);
-    return d.getFullYear() + '-' +
-      String(d.getMonth() + 1).padStart(2, '0') + '-' +
-      String(d.getDate()).padStart(2, '0');
+    return ukHourNow() < 6
+      ? new Date(now.getTime() - 86400000).toLocaleDateString('en-CA', { timeZone: 'Europe/London' })
+      : now.toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
   }
   function calendarDateKey() {
-    const d = new Date();
-    return d.getFullYear() + '-' +
-      String(d.getMonth() + 1).padStart(2, '0') + '-' +
-      String(d.getDate()).padStart(2, '0');
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
   }
 
   // -------- Read progress from localStorage --------
@@ -254,8 +252,7 @@ body.topbar-modal-open {
     if (total === 0) return 'idle';
     if (done >= total) return 'good';
     if (done >= total * 0.5) return 'warn';
-    const h = new Date().getHours();
-    if (h >= 18 && done < total * 0.5) return 'miss';
+    if (ukHourNow() >= 18 && done < total * 0.5) return 'miss';
     return 'warn';
   }
 

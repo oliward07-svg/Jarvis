@@ -505,13 +505,14 @@ main {
   const storeGet = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
   const storeSet = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
+  function ukHourNow() {
+    return +new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: 'numeric', hour12: false }).format(new Date());
+  }
   function getActiveDate() {
     const now = new Date();
-    if (now.getHours() < 6) now.setDate(now.getDate() - 1);
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+    return ukHourNow() < 6
+      ? new Date(now.getTime() - 86400000).toLocaleDateString('en-CA', { timeZone: 'Europe/London' })
+      : now.toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
   }
 
   const TEMPLATE_VERSION = 5;
@@ -687,8 +688,8 @@ main {
     const groupsEl = document.getElementById('stackGroups');
     groupsEl.innerHTML = '';
 
-    const now = new Date();
-    const nowHour = now.getHours() + (now.getMinutes() / 60);
+    const _ukHP = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+    const nowHour = +_ukHP.find(x => x.type === 'hour').value + +_ukHP.find(x => x.type === 'minute').value / 60;
 
     STACK_WINDOWS.forEach(win => {
       const winItems = items.filter(i => (i.window || 'anytime') === win.key);
@@ -750,8 +751,8 @@ main {
     const items = getItems();
     const taken = getTaken();
     const low = getLow();
-    const now = new Date();
-    const nowHour = now.getHours() + (now.getMinutes() / 60);
+    const _ukHP = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+    const nowHour = +_ukHP.find(x => x.type === 'hour').value + +_ukHP.find(x => x.type === 'minute').value / 60;
 
     const missed = [];
     const lowList = [];

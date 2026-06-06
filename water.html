@@ -689,7 +689,7 @@ html, body {
   $('appTitle').textContent = CONFIG.appTitle || 'Water Coach';
 
   function dateKey(d) {
-    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    return d.toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
   }
   function todayKey() { return dateKey(new Date()); }
   function todayCount() { return state.logs[todayKey()] || 0; }
@@ -737,10 +737,12 @@ html, body {
   }
 
   function renderDayPill() {
-    const d = new Date();
+    const key = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+    const [y, m, d] = key.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
     const dows = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
     const mons = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    $('dayPillLabel').textContent = dows[d.getDay()] + ', ' + mons[d.getMonth()] + ' ' + d.getDate();
+    $('dayPillLabel').textContent = dows[dt.getDay()] + ', ' + mons[dt.getMonth()] + ' ' + dt.getDate();
   }
 
   function renderWater() {

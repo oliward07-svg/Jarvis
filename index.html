@@ -1104,37 +1104,34 @@
         return keys;
       }
 
+      function ukHour() {
+        return +new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: 'numeric', hour12: false }).format(new Date());
+      }
+
       function dateKeyFromDate(date) {
-        return date.toISOString().slice(0, 10);
+        return date.toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
       }
 
       function getActiveDateString() {
         const now = new Date();
-        if (now.getHours() < 6) {
-          const copy = new Date(now);
-          copy.setDate(copy.getDate() - 1);
-          return dateKeyFromDate(copy);
+        if (ukHour() < 6) {
+          return new Date(now.getTime() - 86400000).toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
         }
-        return dateKeyFromDate(now);
+        return now.toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
       }
 
       function getTomorrowDateString() {
         const now = new Date();
-        if (now.getHours() < 6) {
-          return dateKeyFromDate(now);
+        if (ukHour() < 6) {
+          return now.toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
         }
-        const copy = new Date(now);
-        copy.setDate(copy.getDate() + 1);
-        return dateKeyFromDate(copy);
+        return new Date(now.getTime() + 86400000).toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
       }
 
       function formatDateString(dateStr) {
-        const parsed = new Date(dateStr);
-        return parsed.toLocaleDateString('en-US', {
-          weekday: 'short',
-          month: 'short',
-          day: 'numeric'
-        });
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const parsed = new Date(y, m - 1, d);
+        return parsed.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' });
       }
 
       function loadGoals(storageKey) {
@@ -1167,8 +1164,7 @@
       }
 
       function formatClock(date) {
-        const options = { hour: 'numeric', minute: '2-digit' };
-        return date.toLocaleTimeString('en-US', options);
+        return date.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', timeZone: 'Europe/London' });
       }
 
       function interpolateColor(percent) {
@@ -1616,7 +1612,9 @@
 
       function updateDayRing() {
         const now = new Date();
-        const currentHours = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+        const _ukP = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(now);
+        const _ukG = t => +_ukP.find(x => x.type === t).value;
+        const currentHours = _ukG('hour') + _ukG('minute') / 60 + _ukG('second') / 3600;
         elements.ringClock.textContent = formatClock(now);
         if (currentHours < WAKE_HOUR) {
           elements.ringPercent.textContent = '—';

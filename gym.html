@@ -1738,7 +1738,7 @@ img, video, canvas, svg { max-width: 100%; }
         if (found >= 0) idx = found;
       }
       s.splitAnchor = {
-        date: (CONFIG.splitAnchor && CONFIG.splitAnchor.date) || new Date().toISOString().slice(0, 10),
+        date: (CONFIG.splitAnchor && CONFIG.splitAnchor.date) || new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }),
         index: idx
       };
     }
@@ -2006,10 +2006,12 @@ img, video, canvas, svg { max-width: 100%; }
     }
   }
   function todayDateLabel() {
-    const d = new Date();
+    const key = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+    const [y, m, d] = key.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
     const dows = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
     const mons = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    return dows[d.getDay()] + ', ' + mons[d.getMonth()] + ' ' + d.getDate();
+    return dows[dt.getDay()] + ', ' + mons[dt.getMonth()] + ' ' + dt.getDate();
   }
   function isRestName(name) { return /^rest\b/i.test(name || ''); }
   function splitLabel(name) {
@@ -2140,8 +2142,10 @@ img, video, canvas, svg { max-width: 100%; }
     const eyebrow = $('poTwDateLabel');
     const dows = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
     const mons = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    const d = new Date();
-    eyebrow.textContent = 'TODAY · ' + dows[d.getDay()] + ', ' + mons[d.getMonth()] + ' ' + d.getDate();
+    const _dKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+    const [_dy, _dm, _dd] = _dKey.split('-').map(Number);
+    const _dt = new Date(_dy, _dm - 1, _dd);
+    eyebrow.textContent = 'TODAY · ' + dows[_dt.getDay()] + ', ' + mons[_dt.getMonth()] + ' ' + _dt.getDate();
 
     $('poTwSetCount').textContent = sum.totalSets;
     $('poTwTotalVol').textContent = Math.round(sum.totalVol).toLocaleString() + ' ' + u + ' lifted';
@@ -2631,7 +2635,7 @@ img, video, canvas, svg { max-width: 100%; }
     try { localStorage.setItem(WT_KEY, JSON.stringify(arr)); } catch (e) {}
   }
   function wtDateKey(d) {
-    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    return d.toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
   }
   function wtParseKey(key) {
     const [y, m, d] = key.split('-').map(Number);
