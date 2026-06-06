@@ -1014,7 +1014,7 @@
 
     @media (max-width: 480px) {
       body {
-        padding-top: 18px;
+        padding-top: max(18px, env(safe-area-inset-top));
       }
 
       .dash-title {
