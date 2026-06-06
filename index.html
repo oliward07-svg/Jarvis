@@ -336,11 +336,94 @@
       color: var(--text-secondary);
     }
 
-    .ring-range {
+    .ring-percent.sleep-mode {
+      font-size: 24px;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+
+    .sleep-form {
+      margin-top: 4px;
+    }
+
+    .sleep-form-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .sleep-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sleep-label {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-tertiary);
+    }
+
+    .sleep-input {
+      font-size: 14px;
+      padding: 7px 10px;
+      border-radius: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.28);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      width: 106px;
+      cursor: pointer;
+      color-scheme: dark;
+    }
+
+    .sleep-input:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.35);
+      background: rgba(0, 0, 0, 0.40);
+    }
+
+    .sleep-arrow {
+      font-size: 14px;
+      color: var(--text-tertiary);
+      padding-bottom: 9px;
+    }
+
+    .sleep-btn {
+      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      background: linear-gradient(180deg, #FFFFFF 0%, #E8E5DD 100%);
+      color: #0A0A0B;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 3px 10px rgba(0,0,0,0.3);
+      transition: transform 0.1s, box-shadow 0.15s;
+    }
+
+    .sleep-btn:hover { transform: translateY(-1px); }
+    .sleep-btn:active { transform: scale(0.97); }
+
+    .sleep-clear-btn {
       font-size: 11px;
       font-family: var(--font-mono);
       color: var(--text-tertiary);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      letter-spacing: 0.04em;
     }
+
+    .sleep-clear-btn:hover { color: var(--text-secondary); }
 
     .section {
       display: flex;
@@ -964,9 +1047,23 @@
           </div>
         </div>
         <div class="ring-copy">
-          <div id="ringStatus" class="ring-status">😴 Still sleeping</div>
-          <div id="ringRemaining" class="ring-remaining">0h 00m until wake-up</div>
-          <div class="ring-range">8:00 AM – 12:00 AM</div>
+          <div id="ringStatus" class="ring-status">Log last night's sleep</div>
+          <div id="ringRemaining" class="ring-remaining" style="display:none"></div>
+          <div id="sleepForm" class="sleep-form">
+            <div class="sleep-form-row">
+              <div class="sleep-form-group">
+                <label class="sleep-label">Bedtime</label>
+                <input type="time" id="sleepBedtime" class="sleep-input" />
+              </div>
+              <span class="sleep-arrow">→</span>
+              <div class="sleep-form-group">
+                <label class="sleep-label">Wake up</label>
+                <input type="time" id="sleepWaketime" class="sleep-input" />
+              </div>
+              <button id="sleepLogBtn" class="sleep-btn">Log</button>
+            </div>
+          </div>
+          <button id="sleepClearBtn" class="sleep-clear-btn" style="display:none">Clear log</button>
         </div>
       </div>
     </div>
@@ -1045,8 +1142,6 @@
   <script>
     (() => {
       const ANTHROPIC_API_KEY = '';
-      const WAKE_HOUR = 8;
-      const SLEEP_HOUR = 24;
       const RING_RADIUS = 52;
       const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
       const colorStops = [
@@ -1608,63 +1703,65 @@
         renderListInto(goals, elements.tomorrowList, elements.tomorrowEmptyState, 'tomorrow', true, tomorrowKey);
       }
 
-      function formatRemaining(hours) {
-        const whole = Math.max(0, Math.floor(hours));
-        const minutes = Math.max(0, Math.round((hours - whole) * 60));
-        return `${whole}h ${minutes.toString().padStart(2, '0')}m`;
+      function getSleepLog() {
+        const data = storeGet('sleep_v1');
+        if (!data || data.date !== getActiveDateString()) return null;
+        return data;
+      }
+      function saveSleepLog(bedtime, waketime) {
+        localStorage.setItem('sleep_v1', JSON.stringify({ bedtime, waketime, date: getActiveDateString() }));
+      }
+      function clearSleepLog() {
+        localStorage.removeItem('sleep_v1');
+      }
+      function calcSleepHours(bedtime, waketime) {
+        const [bh, bm] = bedtime.split(':').map(Number);
+        const [wh, wm] = waketime.split(':').map(Number);
+        let mins = (wh * 60 + wm) - (bh * 60 + bm);
+        if (mins <= 0) mins += 24 * 60;
+        return mins / 60;
+      }
+      function formatSleepHours(hours) {
+        const h = Math.floor(hours);
+        const m = Math.round((hours - h) * 60);
+        return m > 0 ? `${h}h ${m}m` : `${h}h`;
+      }
+      function fmt12(time24) {
+        const [h, m] = time24.split(':').map(Number);
+        return `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
       }
 
       function updateDayRing() {
-        const now = new Date();
-        const _ukP = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(now);
-        const _ukG = t => +_ukP.find(x => x.type === t).value;
-        const currentHours = _ukG('hour') + _ukG('minute') / 60 + _ukG('second') / 3600;
-        elements.ringClock.textContent = formatClock(now);
-        if (currentHours < WAKE_HOUR) {
+        elements.ringClock.textContent = formatClock(new Date());
+        const log = getSleepLog();
+
+        if (!log) {
+          elements.ringPercent.classList.remove('sleep-mode');
           elements.ringPercent.textContent = '—';
-          elements.ringPhase.textContent = 'SLEEPING';
-          elements.ringStatus.textContent = '😴 Still sleeping';
-          elements.ringRemaining.textContent = `${formatRemaining(WAKE_HOUR - currentHours)} until wake-up`;
+          elements.ringPhase.textContent = 'SLEEP';
           elements.ringFill.style.stroke = '#4D4B47';
           elements.ringFill.style.strokeDasharray = RING_CIRCUMFERENCE;
           elements.ringFill.style.strokeDashoffset = RING_CIRCUMFERENCE;
+          elements.ringStatus.textContent = "Log last night's sleep";
+          elements.ringRemaining.style.display = 'none';
+          document.getElementById('sleepForm').style.display = '';
+          document.getElementById('sleepClearBtn').style.display = 'none';
           return;
         }
 
-        if (currentHours >= SLEEP_HOUR) {
-          elements.ringPercent.textContent = '100%';
-          elements.ringPhase.textContent = 'PAST BEDTIME';
-          elements.ringStatus.textContent = '⚠️ Past bedtime';
-          elements.ringRemaining.textContent = 'Sleep!';
-          elements.ringFill.style.stroke = '#E25D7A';
-          elements.ringFill.style.strokeDasharray = RING_CIRCUMFERENCE;
-          elements.ringFill.style.strokeDashoffset = 0;
-          return;
-        }
-
-        const percent = ((currentHours - WAKE_HOUR) / (SLEEP_HOUR - WAKE_HOUR)) * 100;
-        const [r, g, b] = interpolateColor(percent);
-        elements.ringPercent.textContent = `${Math.round(percent)}%`;
-        if (percent < 25) {
-          elements.ringPhase.textContent = 'MORNING';
-          elements.ringStatus.textContent = '☀️ Morning — fresh start';
-        } else if (percent < 50) {
-          elements.ringPhase.textContent = 'MIDDAY';
-          elements.ringStatus.textContent = '⚡ Midday — keep moving';
-        } else if (percent < 75) {
-          elements.ringPhase.textContent = 'AFTERNOON';
-          elements.ringStatus.textContent = '🔥 Afternoon — push it';
-        } else if (percent < 90) {
-          elements.ringPhase.textContent = 'EVENING';
-          elements.ringStatus.textContent = '⏳ Evening — wrap up';
-        } else {
-          elements.ringPhase.textContent = 'BEDTIME';
-          elements.ringStatus.textContent = '🌙 Bedtime soon';
-        }
-        elements.ringRemaining.textContent = `${formatRemaining(SLEEP_HOUR - currentHours)} awake time left`;
-        elements.ringFill.style.stroke = `rgb(${r}, ${g}, ${b})`;
+        const hours = calcSleepHours(log.bedtime, log.waketime);
+        const pct = Math.min(1, hours / 8);
+        elements.ringPercent.classList.add('sleep-mode');
+        elements.ringPercent.textContent = formatSleepHours(hours);
+        elements.ringPhase.textContent = hours >= 8 ? 'GREAT' : hours >= 7 ? 'GOOD' : hours >= 6 ? 'OK' : 'SHORT';
+        elements.ringFill.style.stroke = hours >= 7 ? '#6EE7B7' : hours >= 6 ? '#7DD3FC' : '#A78BFA';
         elements.ringFill.style.strokeDasharray = RING_CIRCUMFERENCE;
-        elements.ringFill.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - percent / 100);
+        elements.ringFill.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - pct);
+        elements.ringStatus.textContent = `${formatSleepHours(hours)} last night`;
+        elements.ringRemaining.textContent = `${fmt12(log.bedtime)} → ${fmt12(log.waketime)}`;
+        elements.ringRemaining.style.display = '';
+        document.getElementById('sleepForm').style.display = 'none';
+        document.getElementById('sleepClearBtn').style.display = '';
       }
 
       function pushRemainingToTomorrow() {
@@ -1802,6 +1899,18 @@
         startTicker();
         updateDayRing();
         setInterval(updateDayRing, 60 * 1000);
+
+        document.getElementById('sleepLogBtn').addEventListener('click', () => {
+          const bedtime = document.getElementById('sleepBedtime').value;
+          const waketime = document.getElementById('sleepWaketime').value;
+          if (!bedtime || !waketime) return;
+          saveSleepLog(bedtime, waketime);
+          updateDayRing();
+        });
+        document.getElementById('sleepClearBtn').addEventListener('click', () => {
+          clearSleepLog();
+          updateDayRing();
+        });
 
         elements.gmPushBtn.addEventListener('click', pushRemainingToTomorrow);
         bindAddHandlers(elements.goalInput, elements.goalAddBtn, elements.goalPolishBtn, elements.polishStatus, getTodayStorageKey, loadToday);
